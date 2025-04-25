@@ -30,7 +30,7 @@ def main():
     # Afficher un échantillon
     df.select("track_name", "track_artist", "mood", "duration_ms").show(20, truncate=False)
     # Sauvegarde (optionnelle)
-    df.coalesce(1).write.json("output/advanced_kaggle_tracks_by_mood.json")
+    df.coalesce(1).write.mode("overwrite").json("output/advanced_kaggle_tracks_by_mood.json")
 
     spark.stop()
 
