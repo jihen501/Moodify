@@ -5,18 +5,16 @@ def main():
     spark = SparkSession.builder.appName("AdvancedKaggleMoodifyBatch").getOrCreate()
     print("Spark session created")
     # Lire les deux fichiers
-    df1 = spark.read.csv("data/high_popularity_spotify_data.csv", header=True, inferSchema=True)
-    df2 = spark.read.csv("data/low_popularity_spotify_data.csv", header=True, inferSchema=True)
-    print("Dataframes loaded")
+    #df1 = spark.read.csv("data/high_popularity_spotify_data.csv", header=True, inferSchema=True)
+    df = spark.read.csv("data/combined_spotify_data.csv", header=True, inferSchema=True)
     # Fusionner
-    df = df1.unionByName(df2)
     df.show(5)
     df.printSchema()
     # Sélection des colonnes utiles
     df = df.select(
         "track_name", "track_artist", "track_popularity",
         "valence", "energy", "danceability", "tempo", "acousticness",
-        "instrumentalness", "speechiness", "liveness", "loudness"
+        "instrumentalness", "speechiness", "liveness", "loudness","duration_ms"
     )
 
     df = df.withColumn("mood", when((col("danceability") > 0.7) & (col("energy") > 0.7), "Dance Party")
@@ -32,7 +30,7 @@ def main():
     # Afficher un échantillon
     df.select("track_name", "track_artist", "mood", "duration_ms").show(20, truncate=False)
     # Sauvegarde (optionnelle)
-    df.coalesce(1).write.mode("overwrite").json("output/advanced_kaggle_tracks_by_mood.json")
+    df.coalesce(1).write.json("output/advanced_kaggle_tracks_by_mood.json")
 
     spark.stop()
 
