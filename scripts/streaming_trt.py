@@ -1,34 +1,64 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import when, col, from_unixtime, to_timestamp
+from pyspark.sql.functions import when, col, to_timestamp, lit, collect_list, struct, expr
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, LongType, ArrayType
 
 def main():
-    spark = SparkSession.builder.appName("StreamingMoodDetection").getOrCreate()
-    spark.sparkContext.setLogLevel("WARN")
+    spark = SparkSession.builder.appName("StreamingMoodDetectionWithRecs").getOrCreate()
+    spark.sparkContext.setLogLevel("INFO")
 
-    # Lecture streaming depuis un dossier (dépôt de fichiers JSON)
-    df_stream = spark.readStream.schema(
-        "user_id STRING, track_id STRING, valence DOUBLE, energy DOUBLE, danceability DOUBLE, acousticness DOUBLE, instrumentalness DOUBLE, speechiness DOUBLE, duration_ms LONG, timestamp STRING"
-    ).json("data/streaming_input/")
+    # Load the batch-processed mood data for recommendations
+    df_mood = spark.read.json("output/advanced_kaggle_tracks_by_mood.json")
+    df_mood = df_mood.cache()
 
-    # Traitement mood
-    df_with_mood = df_stream.withColumn("mood", when((col("danceability") > 0.7) & (col("energy") > 0.7), "Dance Party")
-                                                  .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy Vibes")
-                                                  .when((col("valence") < 0.3) & (col("energy") < 0.4), "Sad")
-                                                  .when((col("acousticness") > 0.6) & (col("instrumentalness") > 0.5), "Chill / Instrumental")
-                                                  .when((col("speechiness") > 0.66), "Talkative / Rap")
-                                                  .when((col("acousticness") > 0.7) & (col("energy") < 0.4), "Calm Acoustic")
-                                                  .when((col("valence").between(0.3, 0.6)) & (col("acousticness") > 0.5) & (col("energy") < 0.5), "Dreamy / Ambient")
-                                                  .otherwise("Mixed"))
+    # Prepare recommendations - collect all tracks by mood
+    mood_recs = df_mood.groupBy("mood") \
+        .agg(collect_list(struct("track_name", "track_artist")).alias("tracks")) \
+        .withColumn("recommendations", expr("slice(tracks, 1, 3)")).select("mood", "recommendations")
 
-    # Conversion du timestamp
-    df_final = df_with_mood.withColumn("timestamp", to_timestamp(col("timestamp")))
+    # Define the schema for the streaming data
+    schema = StructType([
+        StructField("user_id", StringType()),
+        StructField("track_id", StringType()),
+        StructField("valence", DoubleType()),
+        StructField("energy", DoubleType()),
+        StructField("danceability", DoubleType()),
+        StructField("acousticness", DoubleType()),
+        StructField("instrumentalness", DoubleType()),
+        StructField("speechiness", DoubleType()),
+        StructField("duration_ms", LongType()),
+        StructField("timestamp", StringType())
+    ])
 
-    # Sauvegarde en JSON (peut être PostgreSQL, MongoDB plus tard)
-    query = df_final.writeStream \
+    # Read streaming data
+    df_stream = spark.readStream \
+        .schema(schema) \
+        .json("data/streaming_input/")
+
+    # Detect mood for each incoming track
+    df_with_mood = df_stream.withColumn("mood",
+        when((col("danceability") > 0.7) & (col("energy") > 0.7), "Dance Party")
+        .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy Vibes")
+        .when((col("valence") < 0.3) & (col("energy") < 0.4), "Sad")
+        .when((col("acousticness") > 0.6) & (col("instrumentalness") > 0.5), "Chill / Instrumental")
+        .when((col("speechiness") > 0.66), "Talkative / Rap")
+        .when((col("acousticness") > 0.7) & (col("energy") < 0.4), "Calm Acoustic")
+        .when((col("valence").between(0.3, 0.6)) & (col("acousticness") > 0.5) & (col("energy") < 0.5), "Dreamy / Ambient")
+        .otherwise("Mixed"))
+
+    # Convert timestamp and set watermark
+    df_with_mood = df_with_mood.withColumn("timestamp", to_timestamp(col("timestamp")))
+    df_with_mood = df_with_mood.withWatermark("timestamp", "10 minutes")
+
+    # Join with pre-prepared recommendations
+    df_with_recs = df_with_mood.join(mood_recs, "mood", "left")
+
+    # Write the output with exactly 3 recommendations per track
+    query = df_with_recs.writeStream \
         .format("json") \
-        .option("path", "output/stream_output/") \
-        .option("checkpointLocation", "checkpoint/streaming_moodify") \
+        .option("path", "output/stream_output_with_recs/") \
+        .option("checkpointLocation", "checkpoint/streaming_moodify_with_recs") \
         .outputMode("append") \
+        .trigger(processingTime="15 seconds") \
         .start()
 
     query.awaitTermination()
