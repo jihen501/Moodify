@@ -1,1 +1,4 @@
 /checkpoint
+/streaming/venv
+/streaming/creds.txt
+/streaming/.cache
