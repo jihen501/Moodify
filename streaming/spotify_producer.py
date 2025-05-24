@@ -1,13 +1,14 @@
 import random
 import time
+import json
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from kafka import KafkaProducer
 
 # --- Paramètres à renseigner ---
-CLIENT_ID = "e518b067a70c44cba198327cddb72f25"
-CLIENT_SECRET = "62a0ad37022542fcb95eca25f0356b45"
-REDIRECT_URI = "https://d2fd-197-27-250-229.ngrok-free.app/callback"
+CLIENT_ID = "734aafef80964f24ab1e2754d7e6958c"
+CLIENT_SECRET = "3f28a87d472b49b6a8c3d8eec1ffa7be"
+REDIRECT_URI = "https://384e-197-14-206-17.ngrok-free.app"
 SCOPE = "user-read-currently-playing user-read-playback-state"
 
 # --- Création de l'authentification OAuth ---
@@ -22,15 +23,12 @@ sp_oauth = SpotifyOAuth(
 # --- Obtenir un token valide (ouvre le navigateur la 1ère fois) ---
 token_info = sp_oauth.get_access_token(as_dict=True)
 print("Token info:", token_info)
-
 if not token_info:
-    auth_url = sp_oauth.get_authorize_url()
-    print("Ouvre ce lien dans un navigateur pour autoriser l'app :")
-    print(auth_url)
-    response = input("Colle ici l'URL après redirection: ")
+    print("❌ Aucun token trouvé dans .cache. Lance une auth d'abord.")
+    exit()
 
-    code = sp_oauth.parse_response_code(response)
-    token_info = sp_oauth.get_access_token(code)
+if sp_oauth.is_token_expired(token_info):
+    token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
 
 access_token = token_info["access_token"]
 print("Token d'accès :", access_token)
@@ -52,7 +50,6 @@ while True:
             sp = Spotify(auth=token_info["access_token"])
 
         current = sp.current_user_playing_track()
-
         if current and current['item']:
             track = current["item"]
 
@@ -61,9 +58,9 @@ while True:
                 continue
 
             features = {
-                "valence": random.uniform(0, 1),
-                "energy": random.uniform(0, 1),
-                "danceability": random.uniform(0, 1),
+                "valence": 0.8,
+                "energy": 0.8,
+                "danceability": 0.8,
                 "acousticness": random.uniform(0, 1),
                 "instrumentalness": random.uniform(0, 1),
                 "speechiness": random.uniform(0, 1)
@@ -77,6 +74,7 @@ while True:
             track_data = {
                 "user_id": "user_001",
                 "track_id": track["id"],
+                "track_name": track["name"],
                 "valence": features["valence"],
                 "energy": features["energy"],
                 "danceability": features["danceability"],
@@ -86,9 +84,9 @@ while True:
                 "duration_ms": track["duration_ms"],
                 "timestamp": str(int(time.time()))
             }
-            print("🎶 Morceau en cours :", track_data)
-            producer.send("spotify-stream", value=track)
-            print(f"Sent to Kafka: {track['track_id']}, {track['user_id']}")
+            print("🎶 Morceau en cours :" ,track_data )
+            producer.send("spotify-stream", value=track_data)
+            print(f"Sent to Kafka: {track['id']}, {"user_id"}")
         else:
             print("Aucun morceau en lecture actuellement.")
     except Exception as e:

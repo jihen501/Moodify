@@ -1,22 +1,28 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import when, col
+
 def main():
     print("Starting the Advanced Kaggle Moodify Batch Job")
-    spark = SparkSession.builder.appName("AdvancedKaggleMoodifyBatch").getOrCreate()
+
+    spark = SparkSession.builder \
+        .appName("AdvancedKaggleMoodifyBatch") \
+        .config("spark.mongodb.output.uri", "mongodb://localhost:27017/moodify.tracks_by_mood") \
+        .getOrCreate()
+
+    spark.sparkContext.setLogLevel("WARN")
     print("Spark session created")
-    # Lire les deux fichiers
-    #df1 = spark.read.csv("data/high_popularity_spotify_data.csv", header=True, inferSchema=True)
+
+    # Lecture CSV combiné
     df = spark.read.csv("data/combined_spotify_data.csv", header=True, inferSchema=True)
-    # Fusionner
-    df.show(5)
-    df.printSchema()
+
     # Sélection des colonnes utiles
     df = df.select(
         "track_name", "track_artist", "track_popularity",
         "valence", "energy", "danceability", "tempo", "acousticness",
-        "instrumentalness", "speechiness", "liveness", "loudness","duration_ms"
+        "instrumentalness", "speechiness", "liveness", "loudness", "duration_ms"
     )
 
+    # Détection de l'humeur
     df = df.withColumn("mood", when((col("danceability") > 0.7) & (col("energy") > 0.7), "Dance Party")
                              .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy Vibes")
                              .when((col("valence") < 0.3) & (col("energy") < 0.4), "Sad")
@@ -27,12 +33,19 @@ def main():
                              .when((col("valence").between(0.3, 0.6)) & (col("acousticness") > 0.5) & (col("energy") < 0.5), "Dreamy / Ambient")
                              .otherwise("Mixed"))
 
-    # Afficher un échantillon
+    # Affichage d'un échantillon
     df.select("track_name", "track_artist", "mood", "duration_ms").show(20, truncate=False)
-    # Sauvegarde (optionnelle)
+
+    # Sauvegarde locale JSON
     df.coalesce(1).write.mode("overwrite").json("output/advanced_kaggle_tracks_by_mood.json")
+
+    # Sauvegarde dans MongoDB
+    df.write \
+      .format("com.mongodb.spark.sql.DefaultSource") \
+      .mode("overwrite") \
+      .save()
 
     spark.stop()
 
 if __name__ == "__main__":
-    main()  
+    main()
