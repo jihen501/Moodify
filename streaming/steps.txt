@@ -1,0 +1,10 @@
+1- sob ngrok exporti el zip fi :C fi folder ngrok w zideh variable envirenement el dossier fl path 
+2- create a free account in ngrok and run the command kif me heka fi terminal ngrok config add-authtoken 2xVprS...AUCsiNeLpg2
+3- run el command hedhy : ngrok http 8888 Starts a secure tunnel from the public internet (HTTPS) to the local machine on port 8888.It creates a public HTTPS URL that anyone (like Spotify) can access, which forwards traffic to http://localhost:8888.
+4- el hasilou  kif trunnou ekhr command bsh tlgo el star hedha Forwarding https://134e-197-238-241-38.ngrok-free.app -> http://localhost:8888    (EXAMPLE RAHOU ) ajoutou el url hedhy 
+https://134e-197-238-241-38.ngrok-free.app/callback ( el url mt3ekom zidoha /callback) zidoha fl app mt3ekom mt3 spotify developer https://developer.spotify.com/dashboard
+zido el urlhedhika fi partie Redirect URIs aale 5tr heya eli bsh naamlo beha el oauth 
+5- akhw kamelna acitvou el venv : .\venv\Scripts\activate  
+6- run this python .\spotify_producer.py bsh yredirectikom el url aatou accés baaedeh yredirectikom l url tbde b nfs el url eli dkhltoha fi dashboard spotify colloh fi terminal eli runnitou fyh w inzlo entrer 
+ 
+
