@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import when, col, to_timestamp, lit, collect_list, struct, expr
+from pyspark.sql.functions import when, col, to_timestamp, lit, collect_list, struct, expr,from_json
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, LongType, ArrayType
 
 def main():
@@ -29,10 +29,19 @@ def main():
         StructField("timestamp", StringType())
     ])
 
-    # Read streaming data
-    df_stream = spark.readStream \
-        .schema(schema) \
-        .json("data/streaming_input/")
+    df_kafka = spark.readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", "localhost:9092") \
+        .option("subscribe", "spotify-stream") \
+        .option("startingOffsets", "latest") \
+        .load()
+
+
+
+    df_stream = df_kafka.selectExpr("CAST(value AS STRING) as json") \
+        .select(from_json(col("json"), schema).alias("data")) \
+        .select("data.*")
+
 
     # Detect mood for each incoming track
     df_with_mood = df_stream.withColumn("mood",
@@ -53,14 +62,32 @@ def main():
     df_with_recs = df_with_mood.join(mood_recs, "mood", "left")
 
     # Write the output with exactly 3 recommendations per track
-    query = df_with_recs.writeStream \
-        .format("json") \
-        .option("path", "output/stream_output_with_recs/") \
-        .option("checkpointLocation", "checkpoint/streaming_moodify_with_recs") \
+    # query = df_with_recs.writeStream \
+    #     .format("json") \
+    #     .option("path", "output/stream_output_with_recs/") \
+    #     .option("checkpointLocation", "checkpoint/streaming_moodify_with_recs") \
+    #     .outputMode("append") \
+    #     .trigger(processingTime="15 seconds") \
+    #     .start()
+    df_mongo = df_with_recs.select(
+
+    "user_id",
+    "track_id",
+    "track_name",
+    "mood",
+    col("recommendations.track_name").alias("recommended_track_names"),
+    col("recommendations.track_artist").alias("recommended_track_artists"),
+    "timestamp")
+
+    query = df_mongo.writeStream \
+        .format("mongodb") \
+        .option("spark.mongodb.connection.uri", "mongodb://localhost:27017") \
+        .option("spark.mongodb.database", "moodify") \
+        .option("spark.mongodb.collection", "recommendations") \
+        .option("checkpointLocation", "checkpoint/streaming_mongo") \
         .outputMode("append") \
         .trigger(processingTime="15 seconds") \
         .start()
-
     query.awaitTermination()
 
 if __name__ == "__main__":

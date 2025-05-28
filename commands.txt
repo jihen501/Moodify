@@ -1,0 +1,6 @@
+spark-submit   --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.2   batch_user_weekly.py
+# This command submits a Spark job using the `spark-submit` command-line tool.
+ spark-submit   --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.2   batch_kaggle.py
+# This command submits another Spark job, likely for processing Kaggle data.
+ spark-submit   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5,org.mongodb.spark:mongo-spark-connector_2.12:3.0.2   streaming_trt.py
+# This command submits a Spark streaming job that processes data from Kafka and MongoDB.
