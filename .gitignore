@@ -1,4 +1,4 @@
 /checkpoint
 /streaming/venv
 /streaming/creds.txt
-/streaming/.cache
+/streaming/.cachedata/combined_spotify_data.json
