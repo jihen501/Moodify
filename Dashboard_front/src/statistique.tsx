@@ -2,6 +2,16 @@ import { useEffect, useState, useMemo } from "react";
 import { fetchWeeklyStats, fetchCurentRecommendations} from "./BackendApi";
 import { FaPlay } from "react-icons/fa";
 
+import { FaSmile, FaRegFrown, FaBolt, FaLeaf, FaMusic } from "react-icons/fa";
+
+// Exemple de correspondance mood -> couleur + icône
+const moodMap: Record<string, { color: string; icon: JSX.Element }> = {
+  Happy: { color: "bg-green-200 text-green-800", icon: <FaSmile /> },
+  Sad: { color: "bg-blue-200 text-blue-800", icon: <FaRegFrown /> },
+  Energetic: { color: "bg-red-200 text-red-800", icon: <FaBolt /> },
+  Chill: { color: "bg-purple-200 text-purple-800", icon: <FaLeaf /> },
+  Default: { color: "bg-gray-200 text-gray-800", icon: <FaMusic /> },
+};
 
 type MoodStat = {
   mood: string;
@@ -33,6 +43,7 @@ const Statistique = ({ userId = "abc123" }) => {
     MoodRecommendation[]
   >([]);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string>('');
+  const [currentMood, setCurrentlyMood] = useState<string>("");
   const [currentlyTime, setCurrentlyTime] = useState<number>(0);
 
 
@@ -91,6 +102,7 @@ const Statistique = ({ userId = "abc123" }) => {
         const response = await fetchCurentRecommendations(userId);
         setCurrentlyPlaying(response.track_name || '');
         setCurrentlyTime(((response.duration_ms)/60000) || 0);
+        setCurrentlyMood(response.mood || '');
         setDynamicRecommendations(response.recommendations || []);
       } catch (err) {
         console.error(
@@ -117,20 +129,26 @@ const Statistique = ({ userId = "abc123" }) => {
               alt="cover"
               className="w-24 h-24 rounded-xl shadow-md object-cover"
             />
-
             {/* Infos musique */}
             <div className="flex-1">
               <p className="text-xl font-bold text-gray-800 truncate">
-                {currentlyPlaying} 
+                {currentlyPlaying}
               </p>
-              <p className="text-sm text-gray-500 italic">
-                 {currentlyTime}
-              </p>
+              <p className="text-sm text-gray-500 italic">{currentlyTime}</p>
 
               {/* Barre de progression */}
               <div className="relative w-full h-2 mt-4 bg-gray-300 rounded-full">
                 <div className="absolute top-0 left-0 h-2 w-1/3 bg-indigo-500 rounded-full animate-pulse"></div>
               </div>
+            </div>
+            {/* Badge Mood */}
+            <div
+              className={`flex items-center space-x-2 px-4 py-4 rounded-2xl font-medium text-xl shadow-md ${
+                moodMap[currentMood]?.color ?? moodMap.Default.color
+              }`}
+            >
+              <span >{moodMap[currentMood]?.icon ?? moodMap.Default.icon}</span>
+              <span>{currentMood}</span>
             </div>
           </div>
 
