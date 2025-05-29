@@ -118,17 +118,26 @@ const Statistique = ({ userId = "abc123" }) => {
   return (
     <div>
       <section>
-        <h2 className="text-xl font-semibold text-gray-700 mb-6 text-center">
-          🔮 Recommandations Actuelles
+        <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
+           Recommandations Actuelles
         </h2>
-        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-36 py-4">
           {dynamicRecommendations.map((rec, idx) => (
-            <li key={idx}>
-              {rec.track_name} –{" "}
-              <span className="italic">{rec.track_artist}</span>
-            </li>
+            <div
+              key={idx}
+              className="border p-4 rounded-xl bg-white shadow-md flex flex-col"
+            >
+              <div>
+                <p className="text-base font-semibold text-gray-800">
+                  {rec.track_name}
+                </p>
+              </div>
+              <div className="flex justify-between items-end text-xs text-gray-500 mt-auto pt-2 border-t">
+                <span className="italic">{rec.track_artist}</span>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
       <div className="px-6 py-12 mt-16 max-w-7xl mx-auto">
@@ -209,32 +218,6 @@ const Statistique = ({ userId = "abc123" }) => {
             </div>
           </section>
         </div>
-
-        {/* 🔮 Recommandations */}
-        <section>
-          <h2 className="text-xl font-semibold text-gray-700 mb-6 text-center">
-            🔮 Recommandations par mood
-          </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {Object.entries(moodRecommendations).map(
-              ([mood, tracks], index) => (
-                <div
-                  key={index}
-                  className="border bg-white rounded-md p-5 shadow-sm"
-                >
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                    {mood}
-                  </h3>
-                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                    {(tracks as string[]).map((track, i) => (
-                      <li key={i}>{track}</li>
-                    ))}
-                  </ul>
-                </div>
-              )
-            )}
-          </div>
-        </section>
       </div>
     </div>
   );
