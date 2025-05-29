@@ -6,9 +6,9 @@ from spotipy.oauth2 import SpotifyOAuth
 from kafka import KafkaProducer
 
 # --- Paramètres à renseigner ---
-CLIENT_ID = "e518b067a70c44cba198327cddb72f25"
+CLIENT_ID = "734aafef80964f24ab1e2754d7e6958c"
 CLIENT_SECRET = "62a0ad37022542fcb95eca25f0356b45"
-REDIRECT_URI = "https://9ec2-197-240-197-68.ngrok-free.app/callback"
+REDIRECT_URI = "https://487e-197-238-15-182.ngrok-free.app"
 SCOPE = "user-read-currently-playing user-read-playback-state"
 
 # --- Création de l'authentification OAuth ---
@@ -86,7 +86,7 @@ while True:
             }
             print("🎶 Morceau en cours :" ,track_data )
             producer.send("spotify-stream", value=track_data)
-            print("Sent to Kafka: ",track['id'])
+            print(f"Sent to Kafka: {track['id']}, {"user_id"}")
         else:
             print("Aucun morceau en lecture actuellement.")
     except Exception as e:
