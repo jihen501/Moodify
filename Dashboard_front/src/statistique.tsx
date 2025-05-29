@@ -1,6 +1,18 @@
 import { useEffect, useState, useMemo } from "react";
-import { fetchWeeklyStats, fetchCurentRecommendations } from "./BackendApi";
+import { fetchWeeklyStats } from "./BackendApi";
 import { io, Socket } from "socket.io-client"; // Add this import
+import { FaPlay } from "react-icons/fa";
+
+import { FaSmile, FaRegFrown, FaBolt, FaLeaf, FaMusic } from "react-icons/fa";
+
+// Exemple de correspondance mood -> couleur + icône
+const moodMap: Record<string, { color: string; icon: JSX.Element }> = {
+  Happy: { color: "bg-green-200 text-green-800", icon: <FaSmile /> },
+  Sad: { color: "bg-blue-200 text-blue-800", icon: <FaRegFrown /> },
+  Energetic: { color: "bg-red-200 text-red-800", icon: <FaBolt /> },
+  Chill: { color: "bg-purple-200 text-purple-800", icon: <FaLeaf /> },
+  Default: { color: "bg-gray-200 text-gray-800", icon: <FaMusic /> },
+};
 
 type MoodStat = {
   mood: string;
@@ -20,13 +32,6 @@ type WeeklyStats = {
   most_common_mood: string;
   weeklySongs?: Song[];
 };
-const weeklySongs = [
-  { title: "Sunflower", duration: "3:30", mood: "Happy" },
-  { title: "Someone Like You", duration: "4:45", mood: "Sad" },
-  { title: "Stayin'' Alive", duration: "3:57", mood: "Energetic" },
-  { title: "Shape of You", duration: "3:53", mood: "Happy" },
-  { title: "Lose Yourself", duration: "5:20", mood: "Energetic" },
-];
 type MoodRecommendation = {
   track_name: string;
   track_artist: string;
@@ -41,6 +46,10 @@ const Statistique = ({ userId = "1" }) => {
   useEffect(() => {
     // Connect to Socket.IO backend
     const socket: Socket = io("http://localhost:5000"); // Adjust port if needed
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string>('');
+  const [currentMood, setCurrentlyMood] = useState<string>("");
+  const [currentlyTime, setCurrentlyTime] = useState<number>(0);
+
 
     socket.on("recommendation_update", (data) => {
       // Filter by userId if needed
@@ -51,6 +60,9 @@ const Statistique = ({ userId = "1" }) => {
         userId
       );
       if (data.user_id === userId) {
+        setCurrentlyPlaying(data.track_name || '');
+        setCurrentlyTime(((data.duration_ms)/60000) || 0);
+        setCurrentlyMood(data.mood || '');
         setDynamicRecommendations(data.recommendations || []);
       }
     });
@@ -74,13 +86,6 @@ const Statistique = ({ userId = "1" }) => {
     []
   );
 
-  const moodRecommendations = {
-    Happy: ["Blinding Lights – The Weeknd", "Good as Hell – Lizzo"],
-    Sad: ["Let Her Go – Passenger", "Skinny Love – Bon Iver"],
-    Energetic: ["Can’t Hold Us – Macklemore", "Levitating – Dua Lipa"],
-    Relaxed: ["Weightless – Marconi Union", "Ocean Eyes – Billie Eilish"],
-    Angry: ["Killing In The Name – RATM", "Break Stuff – Limp Bizkit"],
-  };
 
   useEffect(() => {
     async function loadStats() {
@@ -118,18 +123,70 @@ const Statistique = ({ userId = "1" }) => {
 
   return (
     <div>
+      <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
+        Ta musique du moment
+      </h2>
+      <section className="flex justify-center mt-6">
+        <div className="w-full max-w-7xl p-4 rounded-2xl bg-gradient-to-br from-indigo-100 to-white shadow-xl">
+          <div className="flex items-center space-x-6">
+            <img
+              src="../src/assets/songs.avif"
+              alt="cover"
+              className="w-24 h-24 rounded-xl shadow-md object-cover"
+            />
+            {/* Infos musique */}
+            <div className="flex-1">
+              <p className="text-xl font-bold text-gray-800 truncate">
+                {currentlyPlaying}
+              </p>
+              <p className="text-sm text-gray-500 italic">{currentlyTime}</p>
+
+              {/* Barre de progression */}
+              <div className="relative w-full h-2 mt-4 bg-gray-300 rounded-full">
+                <div className="absolute top-0 left-0 h-2 w-1/3 bg-indigo-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            {/* Badge Mood */}
+            <div
+              className={`flex items-center space-x-2 px-4 py-4 rounded-2xl font-medium text-xl shadow-md ${
+                moodMap[currentMood]?.color ?? moodMap.Default.color
+              }`}
+            >
+              <span >{moodMap[currentMood]?.icon ?? moodMap.Default.icon}</span>
+              <span>{currentMood}</span>
+            </div>
+          </div>
+
+          {/* Contrôle play/pause centré */}
+          <div className="flex justify-center mt-6">
+            <button className="text-indigo-600 hover:text-indigo-800 text-3xl transition-transform transform hover:scale-110">
+              <FaPlay />
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section>
-        <h2 className="text-xl font-semibold text-gray-700 mb-6 text-center">
-          🔮 Recommandations Actuelles
+        <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
+          Recommandations
         </h2>
-        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-36 py-4">
           {dynamicRecommendations.map((rec, idx) => (
-            <li key={idx}>
-              {rec.track_name} –{" "}
-              <span className="italic">{rec.track_artist}</span>
-            </li>
+            <div
+              key={idx}
+              className="border p-4 rounded-xl bg-white shadow-md flex flex-col"
+            >
+              <div>
+                <p className="text-base font-semibold text-gray-800">
+                  {rec.track_name}
+                </p>
+              </div>
+              <div className="flex justify-between items-end text-xs text-gray-500 mt-auto pt-2 border-t">
+                <span className="italic">{rec.track_artist}</span>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
       <div className="px-6 py-12 mt-16 max-w-7xl mx-auto">
@@ -137,41 +194,9 @@ const Statistique = ({ userId = "1" }) => {
           Statistiques de la semaine
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* 🎵 Morceaux joués */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              🎵 Morceaux joués cette semaine
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {weeklySongs.length > 0 ? (
-                weeklySongs.map((song, idx) => (
-                  <div
-                    key={idx}
-                    className="border p-4 rounded-md bg-white shadow-sm flex flex-col justify-between"
-                  >
-                    <div>
-                      <p className="text-base font-semibold text-gray-800">
-                        {song.title}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-end text-xs text-gray-500 mt-auto pt-2 border-t">
-                      <span>⏱ {song.duration}</span>
-                      <span className="italic">{song.mood}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div>Aucun morceau cette semaine.</div>
-              )}
-            </div>
-          </section>
-
+        <div className="">
           {/* 📊 Répartition des moods */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              📊 Répartition des moods
-            </h2>
             <div className="flex gap-4 mb-6">
               <div className="flex-1 bg-purple-100 text-purple-800 p-4 rounded-2xl shadow-md">
                 <h2 className="text-lg font-semibold mb-2">
@@ -210,32 +235,6 @@ const Statistique = ({ userId = "1" }) => {
             </div>
           </section>
         </div>
-
-        {/* 🔮 Recommandations */}
-        <section>
-          <h2 className="text-xl font-semibold text-gray-700 mb-6 text-center">
-            🔮 Recommandations par mood
-          </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {Object.entries(moodRecommendations).map(
-              ([mood, tracks], index) => (
-                <div
-                  key={index}
-                  className="border bg-white rounded-md p-5 shadow-sm"
-                >
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                    {mood}
-                  </h3>
-                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                    {(tracks as string[]).map((track, i) => (
-                      <li key={i}>{track}</li>
-                    ))}
-                  </ul>
-                </div>
-              )
-            )}
-          </div>
-        </section>
       </div>
     </div>
   );
