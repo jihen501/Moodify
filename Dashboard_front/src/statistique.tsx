@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { fetchWeeklyStats, fetchCurentRecommendations} from "./BackendApi";
-import { FaPlay, FaPause } from "react-icons/fa";
+import { FaPlay } from "react-icons/fa";
 
 
 type MoodStat = {
@@ -21,13 +21,6 @@ type WeeklyStats = {
   most_common_mood: string;
   weeklySongs?: Song[];
 };
-const weeklySongs = [
-  { title: "Sunflower", duration: "3:30", mood: "Happy" },
-  { title: "Someone Like You", duration: "4:45", mood: "Sad" },
-  { title: "Stayin'' Alive", duration: "3:57", mood: "Energetic" },
-  { title: "Shape of You", duration: "3:53", mood: "Happy" },
-  { title: "Lose Yourself", duration: "5:20", mood: "Energetic" },
-];
 type MoodRecommendation = {
     track_name: string,
     track_artist: string
@@ -39,6 +32,9 @@ const Statistique = ({ userId = "abc123" }) => {
   const [dynamicRecommendations, setDynamicRecommendations] = useState<
     MoodRecommendation[]
   >([]);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string>('');
+  const [currentlyTime, setCurrentlyTime] = useState<number>(0);
+
 
   const moodColors = useMemo(
     () => ({
@@ -54,14 +50,6 @@ const Statistique = ({ userId = "abc123" }) => {
     }),
     []
   );
-
-  const moodRecommendations = {
-    Happy: ["Blinding Lights – The Weeknd", "Good as Hell – Lizzo"],
-    Sad: ["Let Her Go – Passenger", "Skinny Love – Bon Iver"],
-    Energetic: ["Can’t Hold Us – Macklemore", "Levitating – Dua Lipa"],
-    Relaxed: ["Weightless – Marconi Union", "Ocean Eyes – Billie Eilish"],
-    Angry: ["Killing In The Name – RATM", "Break Stuff – Limp Bizkit"],
-  };
 
 
   useEffect(() => {
@@ -101,7 +89,8 @@ const Statistique = ({ userId = "abc123" }) => {
     async function loadRecommendations() {
       try {
         const response = await fetchCurentRecommendations(userId);
-        console.log("Dynamic Recommendations:", response.recommendations);
+        setCurrentlyPlaying(response.track_name || '');
+        setCurrentlyTime(((response.duration_ms)/60000) || 0);
         setDynamicRecommendations(response.recommendations || []);
       } catch (err) {
         console.error(
@@ -117,11 +106,10 @@ const Statistique = ({ userId = "abc123" }) => {
   
   return (
     <div>
-        <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
-          Ta musique du moment 
-        </h2>
+      <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
+        Ta musique du moment
+      </h2>
       <section className="flex justify-center mt-6">
-
         <div className="w-full max-w-7xl p-4 rounded-2xl bg-gradient-to-br from-indigo-100 to-white shadow-xl">
           <div className="flex items-center space-x-6">
             <img
@@ -132,8 +120,12 @@ const Statistique = ({ userId = "abc123" }) => {
 
             {/* Infos musique */}
             <div className="flex-1">
-              <p className="text-xl font-bold text-gray-800 truncate">jihen</p>
-              <p className="text-sm text-gray-500 italic">aa</p>
+              <p className="text-xl font-bold text-gray-800 truncate">
+                {currentlyPlaying} 
+              </p>
+              <p className="text-sm text-gray-500 italic">
+                 {currentlyTime}
+              </p>
 
               {/* Barre de progression */}
               <div className="relative w-full h-2 mt-4 bg-gray-300 rounded-full">
@@ -179,7 +171,7 @@ const Statistique = ({ userId = "abc123" }) => {
           Statistiques de la semaine
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+        <div className="">
           {/* 📊 Répartition des moods */}
           <section>
             <div className="flex gap-4 mb-6">
@@ -194,7 +186,7 @@ const Statistique = ({ userId = "abc123" }) => {
                 <p className="text-2xl font-bold">{mostCommonMood}</p>
               </div>
             </div>
-            <div className="space-y-4 mx-50">
+            <div className="space-y-4">
               {moodStats.map((mood, idx) => {
                 const percentage = totalMoodDuration
                   ? (
