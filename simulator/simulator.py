@@ -1,5 +1,4 @@
 import random
-import sys
 import time
 import json
 from spotipy import Spotify
@@ -7,9 +6,9 @@ from spotipy.oauth2 import SpotifyOAuth
 from kafka import KafkaProducer
 
 # --- Paramètres à renseigner ---
-CLIENT_ID = "0ef9800fc77142d99a18577b30e0b0a6"
-CLIENT_SECRET = "5da965b0da714041bcfb355bc4c877c9"
-REDIRECT_URI = "https://da03-197-240-197-68.ngrok-free.app"  # URL de redirection après l'authentification
+CLIENT_ID = "734aafef80964f24ab1e2754d7e6958c"
+CLIENT_SECRET = "62a0ad37022542fcb95eca25f0356b45"
+REDIRECT_URI = "https://487e-197-238-15-182.ngrok-free.app"
 SCOPE = "user-read-currently-playing user-read-playback-state"
 
 # --- Création de l'authentification OAuth ---
@@ -20,10 +19,7 @@ sp_oauth = SpotifyOAuth(
     scope=SCOPE,
     cache_path=".cache"  # fichier pour stocker le token et refresh token
 )
-if len(sys.argv) > 1:
-    USER_ID = sys.argv[1]
-else:
-    USER_ID = "1"
+
 # --- Obtenir un token valide (ouvre le navigateur la 1ère fois) ---
 token_info = sp_oauth.get_access_token(as_dict=True)
 print("Token info:", token_info)
@@ -33,7 +29,7 @@ if not token_info:
 
 if sp_oauth.is_token_expired(token_info):
     token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-print("user id=", USER_ID)
+
 access_token = token_info["access_token"]
 print("Token d'accès :", access_token)
 # --- Créer l'objet Spotify avec token d'accès ---
@@ -76,7 +72,7 @@ while True:
                 continue
 
             track_data = {
-                "user_id": USER_ID,
+                "user_id": "user_001",
                 "track_id": track["id"],
                 "track_name": track["name"],
                 "valence": features["valence"],
@@ -90,7 +86,7 @@ while True:
             }
             print("🎶 Morceau en cours :" ,track_data )
             producer.send("spotify-stream", value=track_data)
-            print("Sent to Kafka: ",track['id'])
+            print(f"Sent to Kafka: {track['id']}, {"user_id"}")
         else:
             print("Aucun morceau en lecture actuellement.")
     except Exception as e:
