@@ -20,10 +20,11 @@ sp_oauth = SpotifyOAuth(
     scope=SCOPE,
     cache_path=".cache"  # fichier pour stocker le token et refresh token
 )
-if len(sys.argv) > 1:
-    USER_ID = sys.argv[1]
-else:
-    USER_ID = "1"
+# if len(sys.argv) > 1:
+#     USER_ID = sys.argv[1]
+# else:
+#     USER_ID = "1"
+USER_ID = "user_001"  # Remplacez par votre user_id Spotify
 # --- Obtenir un token valide (ouvre le navigateur la 1ère fois) ---
 token_info = sp_oauth.get_access_token(as_dict=True)
 print("Token info:", token_info)
