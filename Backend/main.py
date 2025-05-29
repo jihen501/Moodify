@@ -1,11 +1,13 @@
+import json
 import sys
-from flask import Flask, redirect, request,jsonify
+from flask import Flask, redirect, request, jsonify
 import subprocess
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from pymongo import MongoClient
 from bson.json_util import dumps
 from flask_cors import CORS
+from kafka import KafkaConsumer
 
 app = Flask(__name__)
 CORS(app)
@@ -33,6 +35,7 @@ def login_spotify():
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
+
 @app.route('/auth_spotify')
 def callback():
     login_spotify()
@@ -42,74 +45,70 @@ def callback():
     sp = Spotify(auth=access_token)
     user_profile = sp.current_user()
     user_id = user_profile['id']
-    subprocess.Popen([sys.executable, '../streaming/spotify_producer.py', user_id])
+    subprocess.Popen(
+        [sys.executable, '../streaming/spotify_producer.py', user_id])
     return redirect(f"http://localhost:5173/?user_id={user_id}")
+
 
 @app.route('/recommendations/<user_id>', methods=["GET"])
 def get_latest_recommendations(user_id):
-    '''
-    latest_doc=recommendations_collection.find_one(
-        {"user_id": user_id},
-        sort=[("timestamp", -1)]
+    user_id = 'user_001'
+    consumer = KafkaConsumer(
+        'moodify-updates',
+        bootstrap_servers='127.0.0.1:29092',
+        auto_offset_reset='latest',
+        enable_auto_commit=True,
+        group_id=None,  # Use None for a new consumer group each time
+        value_deserializer=lambda m: json.loads(m.decode('utf-8'))
     )
 
-    if not latest_doc:
-        return jsonify({"error": "No recommendations found for user"}), 404
+    print(f"Listening for Kafka messages for user: {user_id}")
 
-    # Préparer les recommandations
-    track_names = latest_doc.get("recommended_track_names", [])
-    track_artists = latest_doc.get("recommended_track_artists", [])
-    
-    recommendations = [
-        {"track_name": name, "track_artist": artist}
-        for name, artist in zip(track_names, track_artists)
-    ]
+    max_messages = 50
+    matched_message = None
 
+    for i, msg in enumerate(consumer):
+        data = msg.value
+        if data.get("user_id") == user_id:
+            matched_message = data
+            print('this is matched messages ', matched_message)
+            break
+        if i >= max_messages:
+            break
+    consumer.close()
+
+    if not matched_message:
+        return jsonify({"error": "No Kafka message found for this user"}), 404
+    print('kafka found ', jsonify({
+        "user_id": matched_message["user_id"],
+        "timestamp": matched_message["timestamp"],
+        "mood": matched_message["mood"],
+        "track_name": matched_message.get("track_name"),
+        "duration_ms": matched_message.get("duration_ms"),
+        "recommendations": matched_message.get("recommendations", [])
+    }))
     return jsonify({
-        "user_id": user_id,
-        "timestamp": latest_doc["timestamp"],
-        "mood": latest_doc["mood"],
-        "recommendations": recommendations
-    })'''
-    return jsonify({
-        "user_id": user_id,
-        "timestamp": "2023-10-01T12:00:00Z",
-        "mood": "Happy",
-        "recommendations": [
-            {"track_name": "Happy Song", "track_artist": "Artist A"},
-            {"track_name": "Joyful Tune", "track_artist": "Artist B"},
-            {"track_name": "Uplifting Melody", "track_artist": "Artist C"}
-        ]
+        "user_id": matched_message["user_id"],
+        "timestamp": matched_message["timestamp"],
+        "mood": matched_message["mood"],
+        "track_name": matched_message.get("track_name"),
+        "duration_ms": matched_message.get("duration_ms"),
+        "recommendations": matched_message.get("recommendations", [])
     })
+
 
 @app.route('/weekly_stats/<user_id>', methods=["GET"])
 def get_user_weekly_stats(user_id):
     # Récupère le dernier rapport pour ce user (par sécurité, on trie par insertion ou timestamp si dispo)
-    #report = weekly_reports_collection.find_one({"user_id": user_id}, sort=[("_id", -1)])
+    report = weekly_reports_collection.find_one(
+        {"user_id": 'user_001'}, sort=[("_id", -1)])
 
-    #if report:
-        #return dumps(report), 200  # dumps pour gérer les objets BSON comme ObjectId
-  #  else:
-        #return jsonify({"error": "No report found for user"}), 404
-        return (jsonify({
-  "user_id": "abc12",
-  "track_count": 45,
-  "total_duration_ms": 7560000,
-  "mood_counts": {
-    "Happy": 20,
-    "Sad": 15,
-    "Energetic": 7
-  },
-  "most_common_mood": "Happy",
-  "most_common_mood_count": 20,
-  "total_duration_min": 128.0,
-  "mood_variety": 3,
-  "dominance_ratio": 0.476
-})
-)
-
-
-
+    if report:
+        print(dumps(report))
+        # dumps pour gérer les objets BSON comme ObjectId
+        return dumps(report), 200
+    else:
+        return jsonify({"error": "No report found for user"}), 404
 
 
 if __name__ == '__main__':

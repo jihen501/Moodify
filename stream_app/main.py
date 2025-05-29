@@ -4,6 +4,7 @@ from pyspark.sql.functions import when, col, to_timestamp, lit, collect_list, st
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, LongType, ArrayType
 from pyspark.sql.functions import from_unixtime
 from pyspark.sql.types import IntegerType
+from pyspark.sql.functions import to_json, struct
 
 
 def main():
@@ -93,8 +94,32 @@ def main():
         .outputMode("append") \
         .trigger(processingTime="15 seconds") \
         .start()
+    
+    df_kafka_out = df_with_recs.select(
+        col("user_id").alias("key"),  # optional: use user_id as key
+        to_json(struct(
+            "user_id",
+            "track_id",
+            "track_name",
+            col("duration_ms").cast(IntegerType()),
+            "mood",
+            "recommendations",
+            "timestamp"
+        )).alias("value")
+    )
+
+    kafka_query = df_kafka_out.writeStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", "kafka:9092") \
+        .option("topic", "moodify-updates") \
+        .option("checkpointLocation", "checkpoint/streaming_kafka") \
+        .outputMode("append") \
+        .trigger(processingTime="15 seconds") \
+        .start()
 
     query.awaitTermination()
+    kafka_query.awaitTermination()
+
 
 
 if __name__ == "__main__":
