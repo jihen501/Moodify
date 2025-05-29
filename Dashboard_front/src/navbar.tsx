@@ -1,4 +1,12 @@
+import { useEffect, useState } from "react";
+
 const Navbar = () => {
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("spotify_user_id");
+    setIsSpotifyConnected(!!userId);
+  }, []);
   return (
     <nav className="bg-white p-4 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
@@ -21,13 +29,6 @@ const Navbar = () => {
           </a>
 
           <a
-            href="#"
-            className="text-sm md:text-base text-gray-700 hover:text-pink-500 transition-colors duration-200"
-          >
-            Historique
-          </a>
-
-          <a
             href="/Recommendation"
             className="text-sm md:text-base text-gray-700 hover:text-pink-500 transition-colors duration-200"
           >
@@ -35,7 +36,13 @@ const Navbar = () => {
           </a>
 
           {/* Connexion Spotify */}
-          <div className="relative group cursor-pointer">
+          {!isSpotifyConnected && (
+          <a
+            href="http://localhost:5000/auth_spotify"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative group cursor-pointer"
+          >
             <div className="bg-green-500 px-3 py-1 rounded-sm shadow-md hover:bg-green-600 transition-colors duration-200 flex items-center space-x-2">
               <img
                 src="https://cdn-icons-png.flaticon.com/512/174/174872.png"
@@ -46,7 +53,15 @@ const Navbar = () => {
                 Se connecter à Spotify
               </span>
             </div>
-          </div>
+          </a>
+          )}
+          {isSpotifyConnected && (
+            <div
+              className="text-sm md:text-base text-pink-500 font-bold transition-colors duration-200"
+            >
+              Bienvenue
+            </div>
+          )}
         </div>
       </div>
     </nav>
