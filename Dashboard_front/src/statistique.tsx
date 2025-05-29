@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type JSX } from "react";
 import { fetchWeeklyStats } from "./BackendApi";
 import { io, Socket } from "socket.io-client"; // Add this import
 import { FaPlay } from "react-icons/fa";
@@ -43,13 +43,12 @@ const Statistique = ({ userId = "1" }) => {
   const [dynamicRecommendations, setDynamicRecommendations] = useState<
     MoodRecommendation[]
   >([]);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string>("");
+  const [currentMood, setCurrentlyMood] = useState<string>("");
+  const [currentlyTime, setCurrentlyTime] = useState<number>(0);
   useEffect(() => {
     // Connect to Socket.IO backend
     const socket: Socket = io("http://localhost:5000"); // Adjust port if needed
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string>('');
-  const [currentMood, setCurrentlyMood] = useState<string>("");
-  const [currentlyTime, setCurrentlyTime] = useState<number>(0);
-
 
     socket.on("recommendation_update", (data) => {
       // Filter by userId if needed
@@ -60,9 +59,9 @@ const Statistique = ({ userId = "1" }) => {
         userId
       );
       if (data.user_id === userId) {
-        setCurrentlyPlaying(data.track_name || '');
-        setCurrentlyTime(((data.duration_ms)/60000) || 0);
-        setCurrentlyMood(data.mood || '');
+        setCurrentlyPlaying(data.track_name || "");
+        setCurrentlyTime(data.duration_ms / 60000 || 0);
+        setCurrentlyMood(data.mood || "");
         setDynamicRecommendations(data.recommendations || []);
       }
     });
@@ -85,7 +84,6 @@ const Statistique = ({ userId = "1" }) => {
     }),
     []
   );
-
 
   useEffect(() => {
     async function loadStats() {
@@ -120,7 +118,6 @@ const Statistique = ({ userId = "1" }) => {
     0
   );
 
-
   return (
     <div>
       <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
@@ -152,7 +149,7 @@ const Statistique = ({ userId = "1" }) => {
                 moodMap[currentMood]?.color ?? moodMap.Default.color
               }`}
             >
-              <span >{moodMap[currentMood]?.icon ?? moodMap.Default.icon}</span>
+              <span>{moodMap[currentMood]?.icon ?? moodMap.Default.icon}</span>
               <span>{currentMood}</span>
             </div>
           </div>

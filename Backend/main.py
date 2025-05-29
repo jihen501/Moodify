@@ -54,7 +54,7 @@ def callback():
 @app.route('/weekly_stats/<user_id>', methods=["GET"])
 def get_user_weekly_stats(user_id):
     report = weekly_reports_collection.find_one(
-        {"user_id": 'user_001'}, sort=[("_id", -1)])
+        {"user_id": user_id}, sort=[("_id", -1)])
 
     if report:
         print(dumps(report))
