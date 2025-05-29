@@ -24,6 +24,7 @@ def main():
     # Prepare recommendations
     mood_recs = df_mood.groupBy("mood") \
         .agg(collect_list(struct(col("track_name"), col("track_artist"))).alias("tracks")) \
+        .withColumn("tracks", expr("shuffle(tracks)")) \
         .withColumn("recommendations", expr("slice(tracks, 1, 3)")) \
         .select("mood", "recommendations")
 
@@ -66,14 +67,12 @@ def main():
                                         .otherwise("Mixed"))
 
     df_with_mood = df_with_mood.withColumn(
-    "timestamp", from_unixtime(col("timestamp").cast("long"))
-)
+        "timestamp", from_unixtime(col("timestamp").cast("long"))
+    )
 
     # Join with recommendations
     df_with_recs = df_with_mood.join(mood_recs, "mood", "left")
 
-    # DEBUGGING - Add this temporarily
-    df_with_recs.printSchema()
     # Fixed selection
     df_mongo = df_with_recs.select(
         "user_id",
@@ -94,7 +93,7 @@ def main():
         .outputMode("append") \
         .trigger(processingTime="15 seconds") \
         .start()
-    
+
     df_kafka_out = df_with_recs.select(
         col("user_id").alias("key"),  # optional: use user_id as key
         to_json(struct(
@@ -119,7 +118,6 @@ def main():
 
     query.awaitTermination()
     kafka_query.awaitTermination()
-
 
 
 if __name__ == "__main__":

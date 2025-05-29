@@ -9,7 +9,7 @@ from kafka import KafkaProducer
 # --- Paramètres à renseigner ---
 CLIENT_ID = "e518b067a70c44cba198327cddb72f25"
 CLIENT_SECRET = "62a0ad37022542fcb95eca25f0356b45"
-REDIRECT_URI = "https://4823-197-240-197-68.ngrok-free.app/callback"
+REDIRECT_URI = "https://33ec-197-240-197-68.ngrok-free.app/callback"
 SCOPE = "user-read-currently-playing user-read-playback-state"
 
 # --- Création de l'authentification OAuth ---
@@ -20,11 +20,11 @@ sp_oauth = SpotifyOAuth(
     scope=SCOPE,
     cache_path=".cache"  # fichier pour stocker le token et refresh token
 )
-# if len(sys.argv) > 1:
-#     USER_ID = sys.argv[1]
-# else:
-#     USER_ID = "1"
-USER_ID = "user_001"  # Remplacez par votre user_id Spotify
+if len(sys.argv) > 1:
+     USER_ID = sys.argv[1]
+else:
+     USER_ID = "1"
+#USER_ID = "user_001"  # Remplacez par votre user_id Spotify
 # --- Obtenir un token valide (ouvre le navigateur la 1ère fois) ---
 token_info = sp_oauth.get_access_token(as_dict=True)
 print("Token info:", token_info)

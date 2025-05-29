@@ -9,9 +9,9 @@ export async function fetchWeeklyStats(userId: string) {
     return res.json();
 }
 
-export async function fetchCurentRecommendations(userId: string) {
-    const res = await fetch(baseUrl + `/recommendations/${userId}`);
-    console.log("Fetching recommendations for user:", userId);
+export async function fetchCurentRecommendations() {
+    const res = await fetch(baseUrl + `/recommendations`);
+    console.log("Fetching recommendations for user:");
     if (!res.ok) throw new Error("Erreur lors de la récupération des recommandations");
     return res.json();
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { fetchWeeklyStats, fetchCurentRecommendations} from "./BackendApi";
-
-
+import { fetchWeeklyStats, fetchCurentRecommendations } from "./BackendApi";
+import { io, Socket } from "socket.io-client"; // Add this import
 
 type MoodStat = {
   mood: string;
@@ -29,17 +28,37 @@ const weeklySongs = [
   { title: "Lose Yourself", duration: "5:20", mood: "Energetic" },
 ];
 type MoodRecommendation = {
-    track_name: string,
-    track_artist: string
+  track_name: string;
+  track_artist: string;
 };
-const Statistique = ({ userId = "abc123" }) => {
+const Statistique = ({ userId = "1" }) => {
   const [moodStats, setMoodStats] = useState<MoodStat[]>([]);
   const [totalDurationMin, setTotalDurationMin] = useState<string>("0");
   const [mostCommonMood, setMostCommonMood] = useState<string | null>(null);
   const [dynamicRecommendations, setDynamicRecommendations] = useState<
     MoodRecommendation[]
   >([]);
+  useEffect(() => {
+    // Connect to Socket.IO backend
+    const socket: Socket = io("http://localhost:5000"); // Adjust port if needed
 
+    socket.on("recommendation_update", (data) => {
+      // Filter by userId if needed
+      console.log(
+        "thsi is data user id ",
+        data.user_id,
+        "and userId is",
+        userId
+      );
+      if (data.user_id === userId) {
+        setDynamicRecommendations(data.recommendations || []);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [userId]);
   const moodColors = useMemo(
     () => ({
       Dance: "bg-yellow-400",
@@ -63,7 +82,6 @@ const Statistique = ({ userId = "abc123" }) => {
     Angry: ["Killing In The Name – RATM", "Break Stuff – Limp Bizkit"],
   };
 
-
   useEffect(() => {
     async function loadStats() {
       try {
@@ -76,18 +94,17 @@ const Statistique = ({ userId = "abc123" }) => {
           color: moodColors[mood as keyof typeof moodColors] || "bg-gray-400",
         }));
 
-        const totalMin =
-          parseFloat(String(data.total_duration_min ));
+        const totalMin = parseFloat(String(data.total_duration_min));
 
         setMoodStats(moodStatsArr);
         setTotalDurationMin(totalMin.toFixed(1));
         setMostCommonMood(data.most_common_mood);
-       // setWeeklySongs(data.weeklySongs || []);
+        // setWeeklySongs(data.weeklySongs || []);
       } catch {
         setMoodStats([]);
         setTotalDurationMin("0");
         setMostCommonMood(null);
-       // setWeeklySongs([]);
+        // setWeeklySongs([]);
       }
     }
 
@@ -97,24 +114,8 @@ const Statistique = ({ userId = "abc123" }) => {
     (acc, m) => acc + parseFloat(String(m.duration)),
     0
   );
-  useEffect(() => {
-    async function loadRecommendations() {
-      try {
-        const response = await fetchCurentRecommendations(userId);
-        console.log("Dynamic Recommendations:", response.recommendations);
-        setDynamicRecommendations(response.recommendations || []);
-      } catch (err) {
-        console.error(
-          "Erreur lors du chargement des recommandations dynamiques",
-          err
-        );
-      }
-    }
 
-    loadRecommendations();
-  }, [userId]);
-  
-  
+
   return (
     <div>
       <section>
@@ -238,8 +239,6 @@ const Statistique = ({ userId = "abc123" }) => {
       </div>
     </div>
   );
-
-  
 };
 
 export default Statistique;
