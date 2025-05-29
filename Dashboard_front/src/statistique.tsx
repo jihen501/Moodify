@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { fetchWeeklyStats, fetchCurentRecommendations} from "./BackendApi";
-
+import { FaPlay, FaPause } from "react-icons/fa";
 
 
 type MoodStat = {
@@ -117,9 +117,43 @@ const Statistique = ({ userId = "abc123" }) => {
   
   return (
     <div>
+        <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
+          Ta musique du moment 
+        </h2>
+      <section className="flex justify-center mt-6">
+
+        <div className="w-full max-w-7xl p-4 rounded-2xl bg-gradient-to-br from-indigo-100 to-white shadow-xl">
+          <div className="flex items-center space-x-6">
+            <img
+              src="../src/assets/songs.avif"
+              alt="cover"
+              className="w-24 h-24 rounded-xl shadow-md object-cover"
+            />
+
+            {/* Infos musique */}
+            <div className="flex-1">
+              <p className="text-xl font-bold text-gray-800 truncate">jihen</p>
+              <p className="text-sm text-gray-500 italic">aa</p>
+
+              {/* Barre de progression */}
+              <div className="relative w-full h-2 mt-4 bg-gray-300 rounded-full">
+                <div className="absolute top-0 left-0 h-2 w-1/3 bg-indigo-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contrôle play/pause centré */}
+          <div className="flex justify-center mt-6">
+            <button className="text-indigo-600 hover:text-indigo-800 text-3xl transition-transform transform hover:scale-110">
+              <FaPlay />
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section>
         <h2 className="text-3xl font-bold mb-10 text-gray-800 text-center pt-14">
-           Recommandations Actuelles
+          Recommandations
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-36 py-4">
           {dynamicRecommendations.map((rec, idx) => (
@@ -146,40 +180,8 @@ const Statistique = ({ userId = "abc123" }) => {
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* 🎵 Morceaux joués */}
-          <section>
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              🎵 Morceaux joués cette semaine
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {weeklySongs.length > 0 ? (
-                weeklySongs.map((song, idx) => (
-                  <div
-                    key={idx}
-                    className="border p-4 rounded-md bg-white shadow-sm flex flex-col justify-between"
-                  >
-                    <div>
-                      <p className="text-base font-semibold text-gray-800">
-                        {song.title}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-end text-xs text-gray-500 mt-auto pt-2 border-t">
-                      <span>⏱ {song.duration}</span>
-                      <span className="italic">{song.mood}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div>Aucun morceau cette semaine.</div>
-              )}
-            </div>
-          </section>
-
           {/* 📊 Répartition des moods */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              📊 Répartition des moods
-            </h2>
             <div className="flex gap-4 mb-6">
               <div className="flex-1 bg-purple-100 text-purple-800 p-4 rounded-2xl shadow-md">
                 <h2 className="text-lg font-semibold mb-2">
@@ -192,7 +194,7 @@ const Statistique = ({ userId = "abc123" }) => {
                 <p className="text-2xl font-bold">{mostCommonMood}</p>
               </div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 mx-50">
               {moodStats.map((mood, idx) => {
                 const percentage = totalMoodDuration
                   ? (

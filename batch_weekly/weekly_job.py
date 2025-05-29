@@ -1,6 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, count, sum, expr, collect_list, size, map_from_entries
 from pyspark.sql.types import TimestampType
+from pyspark.sql.window import Window
+from pyspark.sql.functions import udf, row_number
+from pyspark.sql.types import MapType, StringType, IntegerType , DoubleType
+
 
 def main():
     spark = SparkSession.builder \
@@ -35,9 +39,10 @@ def main():
         .drop("mood_counts_structs")
 
     # Compute most common mood per user
-    most_common_df = mood_counts_df.groupBy("user_id") \
-        .agg(expr("first(mood) keep (dense_rank first order by count desc)").alias("most_common_mood"),
-             expr("max(count)").alias("most_common_mood_count"))
+    window = Window.partitionBy("user_id").orderBy(col("count").desc())
+    mood_counts_df = mood_counts_df.withColumn("rn", row_number().over(window))
+    most_common_df = mood_counts_df.filter(col("rn") == 1) \
+        .select("user_id", col("mood").alias("most_common_mood"), col("count").alias("most_common_mood_count"))
 
     # Combine all analyses
     final = agg_base \
@@ -45,8 +50,22 @@ def main():
         .join(most_common_df, on="user_id", how="left")
 
     final = final.withColumn("total_duration_min", col("total_duration_ms") / 60000) \
+        .withColumn("mood_variety", size(col("mood_counts"))) 
+    def map_long_to_int(m):
+        if m is None:
+            return None
+        return {k: int(v) for k, v in m.items()}
+
+    map_long_to_int_udf = udf(map_long_to_int, MapType(StringType(), IntegerType()))
+
+    final = final.withColumn("total_duration_min", col("total_duration_ms") / 60000) \
         .withColumn("mood_variety", size(col("mood_counts"))) \
-        .withColumn("dominance_ratio", col("most_common_mood_count") / col("track_count"))
+        .withColumn("mood_counts", map_long_to_int_udf(col("mood_counts"))) \
+        .withColumn("track_count", col("track_count").cast(IntegerType())) \
+        .withColumn("total_duration_ms", col("total_duration_ms").cast(IntegerType())) \
+        .withColumn("most_common_mood_count", col("most_common_mood_count").cast(IntegerType())) \
+        .withColumn("total_duration_min", col("total_duration_min").cast(DoubleType())) \
+        .withColumn("mood_variety", col("mood_variety").cast(IntegerType()))
 
     # Save report to MongoDB
     final.write.format("mongodb") \

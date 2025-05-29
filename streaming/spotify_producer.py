@@ -7,9 +7,9 @@ from spotipy.oauth2 import SpotifyOAuth
 from kafka import KafkaProducer
 
 # --- Paramètres à renseigner ---
-CLIENT_ID = "0ef9800fc77142d99a18577b30e0b0a6"
-CLIENT_SECRET = "5da965b0da714041bcfb355bc4c877c9"
-REDIRECT_URI = "https://da03-197-240-197-68.ngrok-free.app"  # URL de redirection après l'authentification
+CLIENT_ID = "e518b067a70c44cba198327cddb72f25"
+CLIENT_SECRET = "62a0ad37022542fcb95eca25f0356b45"
+REDIRECT_URI = "https://4823-197-240-197-68.ngrok-free.app/callback"
 SCOPE = "user-read-currently-playing user-read-playback-state"
 
 # --- Création de l'authentification OAuth ---
@@ -40,7 +40,7 @@ print("Token d'accès :", access_token)
 sp = Spotify(auth=access_token)
 
 producer = KafkaProducer(
-    bootstrap_servers="localhost:9092",
+    bootstrap_servers="127.0.0.1:29092",
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
