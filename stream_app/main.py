@@ -55,11 +55,13 @@ def main():
     # Detect mood
     df_with_mood = df_stream.withColumn("mood",
                                         when((col("danceability") > 0.7) & (
-                                            col("energy") > 0.7), "Dance Party")
-                                        .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy Vibes")
+                                            col("energy") > 0.7), "Dance")
+                                        .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy")
                                         .when((col("valence") < 0.3) & (col("energy") < 0.4), "Sad")
-                                        .when((col("acousticness") > 0.6) & (col("instrumentalness") > 0.5), "Chill / Instrumental")
-                                        .when((col("speechiness") > 0.66), "Talkative / Rap")
+                                        .when((col("acousticness") > 0.6) & (col("instrumentalness") > 0.5), "Chill")
+                                        .when((col("speechiness") > 0.66), "Rap")
+                                        .when((col("acousticness") > 0.7) & (col("energy") < 0.4), "Calm")
+                                        .when((col("valence").between(0.3, 0.6)) & (col("acousticness") > 0.5) & (col("energy") < 0.5), "Dreamy")
                                         .otherwise("Mixed"))
 
     df_with_mood = df_with_mood.withColumn(

@@ -1,5 +1,5 @@
-pyspark==3.4.1
 flask
 spotipy
 kafka-python
-
+pymongo
+flask-cors

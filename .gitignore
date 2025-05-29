@@ -2,3 +2,13 @@
 /streaming/venv
 /streaming/creds.txt
 /streaming/.cachedata/combined_spotify_data.json
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+Backend/.venv
+.env
+/.cache
+
+*.log

@@ -1,4 +1,5 @@
 import random
+import sys
 import time
 import json
 from spotipy import Spotify
@@ -19,7 +20,10 @@ sp_oauth = SpotifyOAuth(
     scope=SCOPE,
     cache_path=".cache"  # fichier pour stocker le token et refresh token
 )
-
+if len(sys.argv) > 1:
+    USER_ID = sys.argv[1]
+else:
+    USER_ID = "1"
 # --- Obtenir un token valide (ouvre le navigateur la 1ère fois) ---
 token_info = sp_oauth.get_access_token(as_dict=True)
 print("Token info:", token_info)
@@ -29,7 +33,7 @@ if not token_info:
 
 if sp_oauth.is_token_expired(token_info):
     token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
-
+print("user id=", USER_ID)
 access_token = token_info["access_token"]
 print("Token d'accès :", access_token)
 # --- Créer l'objet Spotify avec token d'accès ---
@@ -72,7 +76,7 @@ while True:
                 continue
 
             track_data = {
-                "user_id": "user_001",
+                "user_id": USER_ID,
                 "track_id": track["id"],
                 "track_name": track["name"],
                 "valence": features["valence"],
