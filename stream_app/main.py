@@ -2,15 +2,22 @@ import logging
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import when, col, to_timestamp, lit, collect_list, struct, expr, from_json
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, LongType, ArrayType
+from pyspark.sql.functions import from_unixtime
+from pyspark.sql.types import IntegerType
 
 
 def main():
-    spark = SparkSession.builder.appName("StreamingMoodDetectionWithRecs").getOrCreate()
+    spark = SparkSession.builder.appName(
+        "StreamingMoodDetectionWithRecs")\
+        .config("spark.mongodb.read.connection.uri", "mongodb://mongo:27017") \
+        .config("spark.mongodb.write.connection.uri", "mongodb://mongo:27017").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
 
     # Load batch data
     df_mood = spark.read.format("mongodb") \
         .option("uri", "mongodb://mongo:27017/moodify.advanced_kaggle_tracks_by_mood") \
+        .option("database", "moodify") \
+        .option("collection", "advanced_kaggle_tracks_by_mood") \
         .load()
 
     # Prepare recommendations
@@ -23,7 +30,7 @@ def main():
     schema = StructType([
         StructField("user_id", StringType()),
         StructField("track_id", StringType()),
-        StructField("track_name", StringType()), 
+        StructField("track_name", StringType()),
         StructField("valence", DoubleType()),
         StructField("energy", DoubleType()),
         StructField("danceability", DoubleType()),
@@ -47,30 +54,32 @@ def main():
 
     # Detect mood
     df_with_mood = df_stream.withColumn("mood",
-        when((col("danceability") > 0.7) & (col("energy") > 0.7), "Dance Party")
-        .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy Vibes")
-        .when((col("valence") < 0.3) & (col("energy") < 0.4), "Sad")
-        .when((col("acousticness") > 0.6) & (col("instrumentalness") > 0.5), "Chill / Instrumental")
-        .when((col("speechiness") > 0.66), "Talkative / Rap")
-        .otherwise("Mixed"))
+                                        when((col("danceability") > 0.7) & (
+                                            col("energy") > 0.7), "Dance Party")
+                                        .when((col("valence") > 0.6) & (col("energy") > 0.5), "Happy Vibes")
+                                        .when((col("valence") < 0.3) & (col("energy") < 0.4), "Sad")
+                                        .when((col("acousticness") > 0.6) & (col("instrumentalness") > 0.5), "Chill / Instrumental")
+                                        .when((col("speechiness") > 0.66), "Talkative / Rap")
+                                        .otherwise("Mixed"))
 
-    df_with_mood = df_with_mood.withColumn("timestamp", to_timestamp(col("timestamp")))
+    df_with_mood = df_with_mood.withColumn(
+    "timestamp", from_unixtime(col("timestamp").cast("long"))
+)
 
     # Join with recommendations
     df_with_recs = df_with_mood.join(mood_recs, "mood", "left")
 
     # DEBUGGING - Add this temporarily
-    print("=== SCHEMA DEBUG ===")
     df_with_recs.printSchema()
-
     # Fixed selection
     df_mongo = df_with_recs.select(
-        col("user_id"),
-        col("track_id"), 
-        col("mood"),
-        expr("transform(recommendations, x -> x.track_name)").alias("recommended_track_names"),
-        expr("transform(recommendations, x -> x.track_artist)").alias("recommended_track_artists"),
-        col("timestamp")
+        "user_id",
+        "track_id",
+        "track_name",  # <-- REMOVE THIS LINE if present!
+        col("duration_ms").cast(IntegerType()).alias("duration_ms"),
+        "mood",
+        "recommendations",
+        "timestamp"
     )
 
     query = df_mongo.writeStream \
@@ -84,3 +93,7 @@ def main():
         .start()
 
     query.awaitTermination()
+
+
+if __name__ == "__main__":
+    main()
